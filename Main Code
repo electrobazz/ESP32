@@ -1,0 +1,92 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid = "Tenda";
+const char* password = "tenda1234";
+
+// GPIO pins
+const int buttonPin1 = 22;
+const int buttonPin2 = 23;
+const int buttonPin3 = 18;
+const int buttonPin4 = 19;
+
+WebServer server(80);
+
+// Define static IP settings
+IPAddress local_IP(192, 168, 0, 200);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
+
+// HTML Page
+void handleRoot() {
+  String webpage = "<html><head><style>";
+  webpage += "body { background-color: #33cc33; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }";
+  webpage += ".container { text-align: center; }";
+  webpage += ".button { padding: 20px 40px; font-size: 18px; margin: 10px; border: none; border-radius: 10px; cursor: pointer; }";
+  webpage += ".on-button { background-color: #ffff00; color: #000000; }";
+  webpage += ".off-button { background-color: #ff0000; color: #ffffff; }";
+  webpage += ".on-button:hover { background-color: #0000ff; color: #ffffff; }";
+  webpage += ".off-button:hover { background-color: #000000; color: #ffffff; }";
+  webpage += "</style></head><body><div class=\"container\">";
+  webpage += "<h1>ESP32 Web Server</h1>";
+  webpage += "<form action=\"/gpio_control\" method=\"post\">";
+  webpage += "<button class=\"button on-button\" name=\"pin\" value=\"22\">GPIO 22 On</button>";
+  webpage += "<button class=\"button off-button\" name=\"pin\" value=\"-22\">GPIO 22 Off</button><br>";
+  webpage += "<button class=\"button on-button\" name=\"pin\" value=\"23\">GPIO 23 On</button>";
+  webpage += "<button class=\"button off-button\" name=\"pin\" value=\"-23\">GPIO 23 Off</button><br>";
+  webpage += "<button class=\"button on-button\" name=\"pin\" value=\"18\">GPIO 18 On</button>";
+  webpage += "<button class=\"button off-button\" name=\"pin\" value=\"-18\">GPIO 18 Off</button><br>";
+  webpage += "<button class=\"button on-button\" name=\"pin\" value=\"19\">GPIO 19 On</button>";
+  webpage += "<button class=\"button off-button\" name=\"pin\" value=\"-19\">GPIO 19 Off</button><br>";
+  webpage += "</form></div></body></html>";
+  server.send(200, "text/html", webpage);
+}
+
+void gpioControl() {
+  if (server.hasArg("pin")) {
+    int pin = abs(server.arg("pin").toInt());
+    int state = server.arg("pin").toInt() > 0 ? HIGH : LOW;
+
+    if (pin == buttonPin1 || pin == buttonPin2 || pin == buttonPin3 || pin == buttonPin4) {
+      digitalWrite(pin, state);
+      Serial.printf("GPIO %d set to %s\n", pin, state == HIGH ? "HIGH" : "LOW");
+      handleRoot(); // Return to main page after action
+    } else {
+      server.send(400, "text/plain", "Invalid pin.");
+    }
+  } else {
+    server.send(400, "text/plain", "Missing pin parameter.");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(buttonPin1, OUTPUT);
+  pinMode(buttonPin2, OUTPUT);
+  pinMode(buttonPin3, OUTPUT);
+  pinMode(buttonPin4, OUTPUT);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.config(local_IP, gateway, subnet);
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi connected");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", HTTP_GET, handleRoot);
+  server.on("/gpio_control", HTTP_POST, gpioControl);
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop() {
+  server.handleClient();
+}

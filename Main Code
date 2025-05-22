@@ -1,8 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-const char* ssid = "Tenda";
-const char* password = "tenda1234";
+const char* ssid = "WiFi Name";
+const char* password = "Password";
 
 // GPIO pins
 const int buttonPin1 = 22;
@@ -90,3 +90,4 @@ void setup() {
 void loop() {
   server.handleClient();
 }
+
